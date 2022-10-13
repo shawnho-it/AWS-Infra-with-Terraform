@@ -106,7 +106,7 @@ data "aws_ami" "app_ami" {
 
 resource "aws_instance" "bastion-host" {
   ami                         = data.aws_ami.app_ami.id
-  instance_type               = "t2.micro"
+  instance_type               = var.instance_type
   subnet_id                   = aws_subnet.public.id
   associate_public_ip_address = true
   key_name                    = "terraform-key"
@@ -119,7 +119,7 @@ resource "aws_instance" "bastion-host" {
 
 resource "aws_instance" "private-instances" {
   ami             = data.aws_ami.app_ami.id
-  instance_type   = "t2.micro"
+  instance_type   = var.instance_type
   subnet_id       = aws_subnet.private.id
   key_name        = "terraform-key"
   security_groups = ["${aws_security_group.private_instances.id}"]
