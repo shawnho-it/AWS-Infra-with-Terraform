@@ -94,3 +94,13 @@ resource "aws_instance" "bastion-host" {
   subnet_id     = aws_subnet.public.id
   associate_public_ip_address = true
 }
+
+resource "aws_instance" "private-instances" {
+  ami           = data.aws_ami.app_ami.id
+  instance_type = "t2.micro"
+  subnet_id     = aws_subnet.private.id
+  count         = 2
+  tags = {
+    Name = var.private_instances_names[count.index]
+  }
+}
