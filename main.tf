@@ -46,7 +46,7 @@ resource "aws_nat_gateway" "natgw" {
   }
 }
 
-resource "aws_route_table" "Public" {
+resource "aws_route_table" "public" {
   vpc_id = aws_vpc.main.id
   tags = {
     Name = "Public"
@@ -57,7 +57,13 @@ resource "aws_route_table" "Public" {
   }
 }
 
-resource "aws_route_table" "Private" {
+resource "aws_route_table_association" "public" {
+  subnet_id      = aws_subnet.public.id
+  route_table_id = aws_route_table.public.id
+}
+
+
+resource "aws_route_table" "private" {
   vpc_id = aws_vpc.main.id
   tags = {
     Name = "Private"
@@ -78,6 +84,11 @@ resource "aws_key_pair" "terraform" {
   public_key = tls_private_key.terraform.public_key_openssh
 }
 
+output "private_key" {
+  value     = tls_private_key.terraform.private_key_pem
+  sensitive = true
+}
+
 data "aws_ami" "app_ami" {
   most_recent = true
   owners      = ["amazon"]
@@ -89,10 +100,15 @@ data "aws_ami" "app_ami" {
 }
 
 resource "aws_instance" "bastion-host" {
-  ami           = data.aws_ami.app_ami.id
-  instance_type = "t2.micro"
-  subnet_id     = aws_subnet.public.id
+  ami                         = data.aws_ami.app_ami.id
+  instance_type               = "t2.micro"
+  subnet_id                   = aws_subnet.public.id
   associate_public_ip_address = true
+  key_name                    = "terraform-key"
+  security_groups             = aws_security_group.bastion.id
+  tags = {
+    Name = "terraform-bastion-host"
+  }
 }
 
 resource "aws_instance" "private-instances" {
@@ -103,4 +119,18 @@ resource "aws_instance" "private-instances" {
   tags = {
     Name = var.private_instances_names[count.index]
   }
+}
+
+resource "aws_security_group" "bastion" {
+  name        = "bastion"
+  description = "Allow SSH traffic from the internet"
+
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  vpc_id = aws_vpc.main.id
 }
