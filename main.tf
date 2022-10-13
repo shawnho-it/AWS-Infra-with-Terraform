@@ -47,7 +47,7 @@ resource "aws_nat_gateway" "natgw" {
 }
 
 resource "aws_route_table" "public" {
-  vpc_id = aws_vpc.main.id
+    vpc_id = aws_vpc.main.id
   tags = {
     Name = "Public"
   }
@@ -110,18 +110,21 @@ resource "aws_instance" "bastion-host" {
   subnet_id                   = aws_subnet.public.id
   associate_public_ip_address = true
   key_name                    = "terraform-key"
-  security_groups             = aws_security_group.bastion.id
+  security_groups             = ["${aws_security_group.bastion.id}"]
+  depends_on                  = [aws_security_group.bastion]
   tags = {
     Name = "terraform-bastion-host"
   }
 }
 
 resource "aws_instance" "private-instances" {
-  ami           = data.aws_ami.app_ami.id
-  instance_type = "t2.micro"
-  subnet_id     = aws_subnet.private.id
-  key_name                    = "terraform-key"
-  count         = 2
+  ami             = data.aws_ami.app_ami.id
+  instance_type   = "t2.micro"
+  subnet_id       = aws_subnet.private.id
+  key_name        = "terraform-key"
+  security_groups = ["${aws_security_group.private_instances.id}"]
+  depends_on      = [aws_security_group.private_instances]
+  count           = 2
   tags = {
     Name = var.private_instances_names[count.index]
   }
@@ -130,6 +133,7 @@ resource "aws_instance" "private-instances" {
 resource "aws_security_group" "bastion" {
   name        = "bastion"
   description = "Allow SSH traffic from the internet"
+  vpc_id      = aws_vpc.main.id
 
   ingress {
     from_port   = 22
@@ -138,5 +142,33 @@ resource "aws_security_group" "bastion" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  vpc_id = aws_vpc.main.id
+  egress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+output "bastion_security_group" {
+  value = aws_security_group.bastion.id
+}
+
+resource "aws_security_group" "private_instances" {
+  name        = "private"
+  description = "Allow SSH traffic from Bastion Host"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    from_port       = 22
+    to_port         = 22
+    protocol        = "tcp"
+    security_groups = ["${aws_security_group.bastion.id}"]
+  }
+
+  egress {
+    from_port = 0
+    to_port   = 0
+    protocol  = -1
+  }
 }
