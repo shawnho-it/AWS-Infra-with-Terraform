@@ -115,6 +115,7 @@ resource "aws_instance" "private-instances" {
   ami           = data.aws_ami.app_ami.id
   instance_type = "t2.micro"
   subnet_id     = aws_subnet.private.id
+  key_name                    = "terraform-key"
   count         = 2
   tags = {
     Name = var.private_instances_names[count.index]
