@@ -19,4 +19,5 @@ The purpose of this code is to simulate a basic working infrastructure of an app
 2. Put in your Access Key & Secret Key in provider.tf
 3. Run **terraform init** in the directory
 4. Run **terraform plan** to check if the output is satisfactory
-5. Run **terraform apply**
+5. Run **terraform apply** to apply the resources
+6. When you are done with the resources, run **terraform destroy** to destroy all resources
